@@ -4,9 +4,9 @@ import { notFound } from "next/navigation";
 export default async function ListingDetail({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const { id } = params;
+  const { id } = await params;
   const listing = await prisma.listing.findUnique({
     where: { id },
     include: { images: true, owner: true },
