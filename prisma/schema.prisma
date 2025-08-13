@@ -1,0 +1,145 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum ListingCategory {
+  TOOLS
+  HELP
+  TRUCKS
+  YARD
+  HANDYMAN
+}
+
+model User {
+  id              String     @id @default(cuid())
+  email           String     @unique
+  name            String
+  image           String?
+  bio             String?
+  location        String?
+  hashedPassword  String
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  listings        Listing[]
+  bookings        Booking[]  @relation("UserBookings")
+  rentals         Booking[]  @relation("UserRentals")
+  conversationsA  Conversation[] @relation("AConversations")
+  conversationsB  Conversation[] @relation("BConversations")
+  messages        Message[]
+  reviewsWritten  Review[]   @relation("ReviewsWritten")
+  reviewsReceived Review[]   @relation("ReviewsReceived")
+  favorites       Favorite[]
+}
+
+model Listing {
+  id            String           @id @default(cuid())
+  title         String
+  description   String
+  dailyPriceCents Int
+  category      ListingCategory
+  location      String?
+  ownerId       String
+  owner         User             @relation(fields: [ownerId], references: [id])
+  availableFrom DateTime?
+  availableTo   DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  images        Image[]
+  bookings      Booking[]
+  favorites     Favorite[]
+  conversations Conversation[]
+  reviews       Review[]
+}
+
+model Image {
+  id        String  @id @default(cuid())
+  url       String
+  listingId String
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+}
+
+model Booking {
+  id               String        @id @default(cuid())
+  listingId        String
+  listing          Listing       @relation(fields: [listingId], references: [id])
+  renterId         String
+  renter           User          @relation("UserRentals", fields: [renterId], references: [id])
+  ownerId          String
+  owner            User          @relation("UserBookings", fields: [ownerId], references: [id])
+  startDate        DateTime
+  endDate          DateTime
+  totalPriceCents  Int
+  status           BookingStatus @default(PENDING)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  review           Review?
+}
+
+model Conversation {
+  id         String  @id @default(cuid())
+  listingId  String
+  listing    Listing @relation(fields: [listingId], references: [id])
+  userAId    String
+  userA      User    @relation("AConversations", fields: [userAId], references: [id])
+  userBId    String
+  userB      User    @relation("BConversations", fields: [userBId], references: [id])
+  createdAt  DateTime @default(now())
+
+  messages   Message[]
+
+  @@unique([listingId, userAId, userBId])
+}
+
+model Message {
+  id              String        @id @default(cuid())
+  conversationId  String
+  conversation    Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId        String
+  sender          User          @relation(fields: [senderId], references: [id])
+  content         String
+  createdAt       DateTime      @default(now())
+}
+
+model Review {
+  id           String   @id @default(cuid())
+  reviewerId   String
+  reviewer     User     @relation("ReviewsWritten", fields: [reviewerId], references: [id])
+  revieweeId   String
+  reviewee     User     @relation("ReviewsReceived", fields: [revieweeId], references: [id])
+  bookingId    String?  @unique
+  booking      Booking? @relation(fields: [bookingId], references: [id])
+  listingId    String?
+  listing      Listing? @relation(fields: [listingId], references: [id])
+  rating       Int
+  comment      String?
+  createdAt    DateTime @default(now())
+}
+
+model Favorite {
+  id        String  @id @default(cuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listingId String
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listingId])
+}
