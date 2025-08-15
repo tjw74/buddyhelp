@@ -4,40 +4,34 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-export default function SignupPage() {
+export default function LoginPage() {
   const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
   const router = useRouter();
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    setSuccess(false);
     
     try {
-      const res = await fetch("/api/users", {
+      const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, name, password }),
+        body: JSON.stringify({ email, password }),
       });
       
       if (!res.ok) {
         const json = await res.json();
-        if (res.status === 409 && json?.user?.id) {
-          setSuccess(true);
-          setTimeout(() => router.push("/login"), 2000);
-          return;
-        }
-        throw new Error(json?.error || "Failed to sign up");
+        throw new Error(json.error || "Login failed");
       }
       
-      setSuccess(true);
-      setTimeout(() => router.push("/login"), 2000);
+      const { user } = await res.json();
+      // Store user in localStorage for demo purposes
+      localStorage.setItem("user", JSON.stringify(user));
+      router.push("/");
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -47,7 +41,7 @@ export default function SignupPage() {
 
   return (
     <div className="max-w-md mx-auto p-6">
-      <h2 className="text-xl font-semibold mb-4">Sign up</h2>
+      <h2 className="text-xl font-semibold mb-4">Login</h2>
       <form className="space-y-3" onSubmit={onSubmit}>
         <input
           className="w-full bg-transparent border border-white/20 rounded px-3 py-2"
@@ -55,13 +49,6 @@ export default function SignupPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           type="email"
-          required
-        />
-        <input
-          className="w-full bg-transparent border border-white/20 rounded px-3 py-2"
-          placeholder="Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
           required
         />
         <input
@@ -76,24 +63,14 @@ export default function SignupPage() {
           disabled={loading} 
           className="w-full rounded border border-white/30 py-2 hover:bg-white/10 disabled:opacity-50"
         >
-          {loading ? "Creating..." : "Create Account"}
+          {loading ? "Logging in..." : "Login"}
         </button>
       </form>
-      
-      {success && (
-        <div className="mt-4 text-sm text-green-400 text-center">
-          Account created successfully! Redirecting to login...
-        </div>
-      )}
-      
       {error && <div className="mt-4 text-sm text-red-400">{error}</div>}
-      
       <div className="mt-4 text-sm text-center">
-        Already have an account?{" "}
-        <Link href="/login" className="underline">Login</Link>
+        Don't have an account?{" "}
+        <Link href="/signup" className="underline">Sign up</Link>
       </div>
     </div>
   );
 }
-
-

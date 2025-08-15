@@ -33,6 +33,16 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json(user, { status: 201 });
   } catch (e: any) {
+    if ((e as any)?.code === "P2002") {
+      const existing = await prisma.user.findUnique({
+        where: { email: data.email },
+        select: { id: true, email: true, name: true },
+      });
+      return NextResponse.json(
+        { error: "Email already exists", user: existing },
+        { status: 409 }
+      );
+    }
     return NextResponse.json({ error: e?.message ?? "failed" }, { status: 500 });
   }
 }
